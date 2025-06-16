@@ -1,0 +1,24 @@
+[gd_scene load_steps=5 format=3 uid="uid://b4fssv5ogweg"]
+
+[ext_resource type="Script" uid="uid://dfryi3c7ved3j" path="res://addons/materialsimulator/material_cell.gd" id="1_licqf"]
+[ext_resource type="Resource" uid="uid://cvwpfsjqiq6rb" path="res://materials/Water.tres" id="2_bqluu"]
+
+[sub_resource type="Gradient" id="Gradient_ggunt"]
+colors = PackedColorArray(1, 1, 1, 0.6, 1, 1, 1, 0.6)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_mkokw"]
+gradient = SubResource("Gradient_ggunt")
+width = 16
+height = 16
+
+[node name="Cell" type="Node2D" node_paths=PackedStringArray("sprite", "particles")]
+script = ExtResource("1_licqf")
+material_type = ExtResource("2_bqluu")
+sprite = NodePath("Sprite")
+particles = NodePath("GPUParticles2D")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture = SubResource("GradientTexture2D_mkokw")
+
+[node name="GPUParticles2D" type="GPUParticles2D" parent="."]
+emitting = false

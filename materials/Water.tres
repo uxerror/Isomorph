@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="MaterialType" load_steps=3 format=3 uid="uid://cvwpfsjqiq6rb"]
+
+[ext_resource type="Script" uid="uid://ccnk2pgeol1kj" path="res://addons/materialsimulator/reaction.gd" id="1_ym5pb"]
+[ext_resource type="Script" uid="uid://qdk6w4daasmu" path="res://addons/materialsimulator/material_type.gd" id="2_72wxp"]
+
+[resource]
+script = ExtResource("2_72wxp")
+name = "Water"
+base_density = 1.0
+viscosity = 0.1
+friction = 0.1
+elasticity = 0.0
+compressibility = 0.0
+stability = 0.9
+max_flow = 1.0
+min_flow = 0.001
+flow_threshold = 0.01
+lateral_flow_factor = 0.8
+melting_point = 0.0
+boiling_point = 100.0
+freezing_point = 0.0
+condensation_point = 100.0
+pressure_sensitivity = 0.0
+ignition_point = 600.0
+thermal_conductivity = 0.0
+thermal_expansion = 0.0
+specific_heat = 1.0
+reactivity = Array[ExtResource("1_ym5pb")]([])
+is_flammable = false
+autoignition_temp = 1000.0
+burn_rate = 0.0
+electrical_resistance = 1.0
+magnetic_permeability = 0.0
+is_conductor = false
+is_biological = false
+decay_rate = 0.0
+growth_rate = 0.0
+life_span = 0.0
+color = Color(0.603922, 1, 1, 1)
+sound_effects = {
+"destroy": "",
+"flow": "",
+"impact": ""
+}
