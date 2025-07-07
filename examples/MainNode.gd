@@ -1,6 +1,6 @@
 extends Node2D
 
-@export var material_server: MaterialSimulationServer
+@export var material_server: MaterialSimulationCore
 @export var selected_material: MaterialType  # Назначаем в инспекторе
 @export var material_amount: int = 1
 

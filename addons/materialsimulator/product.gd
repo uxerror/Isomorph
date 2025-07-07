@@ -1,3 +1,4 @@
+###product.gd
 class_name Product
 extends Resource
 

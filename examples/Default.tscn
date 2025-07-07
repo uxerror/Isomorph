@@ -21,15 +21,15 @@ metadata/_custom_type_script = "uid://bvvaepmbubhnt"
 
 [node name="Node2D" type="Node2D" node_paths=PackedStringArray("material_server")]
 script = ExtResource("1_v212o")
-material_server = NodePath("MaterialSimulationServer")
+material_server = NodePath("MaterialSimulationCore")
 selected_material = ExtResource("3_jmwyw")
 
-[node name="MaterialSimulationServer" type="Node" parent="."]
+[node name="MaterialSimulationCore" type="Node" parent="."]
 script = ExtResource("4_uclss")
 material_cell_scene = ExtResource("5_5gxnh")
-refresh_rate = 0.001
-quadrant_size = 8
+refresh_rate = 0.01
 collision_maps = Array[ExtResource("6_x6lyo")]([SubResource("Resource_1ty2r"), SubResource("Resource_5deic")])
+max_iterations = 6
 enable_temperature = true
 enable_pressure = true
 

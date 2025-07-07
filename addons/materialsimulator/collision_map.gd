@@ -1,3 +1,4 @@
+###collision_map.gd
 class_name CollisionMap
 extends Resource
 

@@ -1,4 +1,5 @@
-class_name MaterialSimulationServer
+###material_simulation_server.gd
+class_name MaterialSimulationCore
 extends Node
 
 # ====================== ОСНОВНЫЕ НАСТРОЙКИ ======================
@@ -62,6 +63,7 @@ var flow_counters: Dictionary = {}
 var cells: Array[MaterialCell] = []
 var cells_positions: Dictionary = {}
 var updated_cells: Array[MaterialCell] = []
+var _new_cells: Array[MaterialCell] = []  # Новые ячейки в текущем кадре
 #endregion
 
 # ====================== СИГНАЛЫ ======================
@@ -144,7 +146,7 @@ func _reset_flow_counters():
 
 func _update_simulation(delta: float) -> bool:
 	updated_cells.clear()
-	var new_cells: Array[MaterialCell] = []
+	_new_cells.clear()
 	var simulation_updated = false
 	
 	# Обновление состояния всех ячеек
@@ -177,7 +179,7 @@ func _update_simulation(delta: float) -> bool:
 			continue
 		
 		# Применение физических правил
-		_apply_physics_rules(cell, new_cells, delta)
+		_apply_rules(cell, delta)
 		
 		if cell.new_amount <= 0:
 			_destroy_cell(cell)
@@ -187,10 +189,10 @@ func _update_simulation(delta: float) -> bool:
 		i -= 1
 	
 	# Применение накопленных потоков
-	_apply_accumulated_flows(new_cells)
+	_apply_accumulated_flows()
 	
 	# Добавление новых ячеек
-	for cell in new_cells:
+	for cell in _new_cells:
 		cells.append(cell)
 		cells_positions[MaterialCell.hash_position(cell.get_x(), cell.get_y())] = cell
 		updated_cells.append(cell)
@@ -216,22 +218,22 @@ func _update_simulation(delta: float) -> bool:
 
 # ====================== ФИЗИЧЕСКИЕ ПРАВИЛА ======================
 #region Физические правила
-func _apply_physics_rules(cell: MaterialCell, new_cells: Array, delta: float):
+func _apply_rules(cell: MaterialCell, delta: float):
 	# 0. Обновление состояния
 	cell.update_state(delta, world_temperature, world_pressure)
 	
 	# 1. Тепловое расширение (особенно для газов)
 	if enable_thermal_expansion and cell.current_state == MaterialCell.State.GAS:
-		_apply_thermal_expansion(cell, new_cells)
+		_apply_thermal_expansion(cell)
 	
 	# 2. Применение гравитации
-	_apply_gravity(cell, new_cells, delta)
+	_apply_gravity(cell, delta)
 	
 	# 3. Горизонтальное растекание
-	_apply_horizontal_flow(cell, new_cells, delta)
+	_apply_horizontal_flow(cell, delta)
 	
 	# 4. Декомпрессия/сжатие
-	_apply_decompression(cell, new_cells, delta)
+	_apply_decompression(cell, delta)
 	
 	# 5. Химические реакции с соседями
 	if enable_chemical_reactions:
@@ -244,16 +246,16 @@ func _apply_physics_rules(cell: MaterialCell, new_cells: Array, delta: float):
 	# 7. Специальные эффекты (горение и т.д.)
 	_apply_special_effects(cell)
 
-func _apply_accumulated_flows(new_cells: Array):
+func _apply_accumulated_flows():
 	# Обработка накопленных потоков для всех ячеек
 	for cell in cells:
 		# Горизонтальные потоки
 		if cell.flow_accumulator.x > micro_flow_threshold:
-			_apply_flow_to_direction(cell, -1, 0, cell.flow_accumulator.x, new_cells)
+			_apply_flow_to_direction(cell, -1, 0, cell.flow_accumulator.x)
 			cell.flow_accumulator.x = 0
 		
 		if cell.flow_accumulator.y > micro_flow_threshold:
-			_apply_flow_to_direction(cell, 1, 0, cell.flow_accumulator.y, new_cells)
+			_apply_flow_to_direction(cell, 1, 0, cell.flow_accumulator.y)
 			cell.flow_accumulator.y = 0
 		
 		# Вертикальные потоки (падение вниз)
@@ -261,7 +263,7 @@ func _apply_accumulated_flows(new_cells: Array):
 			var bottom_cell = get_cell_by_position(cell.get_x(), cell.get_y() + 1)
 			if not bottom_cell:
 				bottom_cell = _create_cell(cell.get_x(), cell.get_y() + 1, 0, cell.material_type)
-				new_cells.append(bottom_cell)
+				_new_cells.append(bottom_cell)
 			
 			var flow = min(cell.flow_accumulator.w, cell.new_amount, 1.0 - bottom_cell.new_amount)
 			bottom_cell.new_amount += flow
@@ -274,7 +276,7 @@ func _apply_accumulated_flows(new_cells: Array):
 			var top_cell = get_cell_by_position(cell.get_x(), cell.get_y() - 1)
 			if not top_cell:
 				top_cell = _create_cell(cell.get_x(), cell.get_y() - 1, 0, cell.material_type)
-				new_cells.append(top_cell)
+				_new_cells.append(top_cell)
 			
 			var flow = min(cell.flow_accumulator.z, cell.new_amount, 1.0 - top_cell.new_amount)
 			top_cell.new_amount += flow
@@ -282,7 +284,7 @@ func _apply_accumulated_flows(new_cells: Array):
 			cell.flow_accumulator.z -= flow
 			flow_counters.decompression += 1
 
-func _apply_thermal_expansion(cell: MaterialCell, new_cells: Array):
+func _apply_thermal_expansion(cell: MaterialCell):
 	# Расчет коэффициента расширения
 	var expansion_factor = 1.0 + cell.material_type.thermal_expansion * (cell.temperature - 20.0)
 	var max_expansion = 2.0
@@ -297,9 +299,9 @@ func _apply_thermal_expansion(cell: MaterialCell, new_cells: Array):
 	if expansion_factor > 1.01:
 		var extra_volume = cell.new_amount * (expansion_factor - 1.0)
 		extra_volume = min(extra_volume, cell.new_amount * (max_expansion - 1.0))
-		_expand_gas(cell, extra_volume, new_cells)
+		_expand_gas(cell, extra_volume)
 
-func _expand_gas(cell: MaterialCell, extra_volume: float, new_cells: Array):
+func _expand_gas(cell: MaterialCell, extra_volume: float):
 	# Направления расширения
 	var expansion_directions = [
 		Vector2i(0, 1),   # Вниз
@@ -325,7 +327,7 @@ func _expand_gas(cell: MaterialCell, extra_volume: float, new_cells: Array):
 		
 		# Создание новой ячейки
 		target_cell = _create_cell(new_x, new_y, 0, cell.material_type)
-		new_cells.append(target_cell)
+		_new_cells.append(target_cell)
 		
 		# Расчет доступного пространства
 		var available_space = 1.0 - target_cell.new_amount - world_pressure
@@ -400,7 +402,7 @@ func _apply_electromagnetic(cell: MaterialCell):
 		cell.apply_force(magnetic_force)
 		updated_cells.append(cell)
 
-func _apply_gravity(cell: MaterialCell, new_cells: Array, delta: float):
+func _apply_gravity(cell: MaterialCell, delta: float):
 	# Проверка наличия препятствия снизу
 	if not _is_map_bottom_cell_empty(cell.get_x(), cell.get_y()): 
 		cell.falls = 0
@@ -425,7 +427,7 @@ func _apply_gravity(cell: MaterialCell, new_cells: Array, delta: float):
 		if flow > 0:
 			if not bottom_cell:
 				bottom_cell = _create_cell(cell.get_x(), cell.get_y() + 1, 0, mat)
-				new_cells.append(bottom_cell)
+				_new_cells.append(bottom_cell)
 				bottom_cell.falls = cell.falls + 1
 			
 			# Перенос материала
@@ -437,7 +439,7 @@ func _apply_gravity(cell: MaterialCell, new_cells: Array, delta: float):
 			updated_cells.append(cell)
 			updated_cells.append(bottom_cell)
 
-func _apply_horizontal_flow(cell: MaterialCell, new_cells: Array, delta: float):
+func _apply_horizontal_flow(cell: MaterialCell, delta: float):
 	var mat = cell.material_type
 	var current_state = cell.current_state
 	var flow_potential = mat.get_flow_factor(cell.new_amount, current_state)
@@ -460,7 +462,7 @@ func _apply_horizontal_flow(cell: MaterialCell, new_cells: Array, delta: float):
 	if right_flow > 0:
 		cell.flow_accumulator.y += right_flow
 
-func _apply_flow_to_direction(cell: MaterialCell, dx: int, dy: int, flow: float, new_cells: Array):
+func _apply_flow_to_direction(cell: MaterialCell, dx: int, dy: int, flow: float):
 	# Перенос материала в указанном направлении
 	var mat = cell.material_type
 	var target_cell = get_cell_by_position(cell.get_x() + dx, cell.get_y() + dy)
@@ -468,7 +470,7 @@ func _apply_flow_to_direction(cell: MaterialCell, dx: int, dy: int, flow: float,
 	# Создание новой ячейки при необходимости
 	if not target_cell:
 		target_cell = _create_cell(cell.get_x() + dx, cell.get_y() + dy, 0, mat)
-		new_cells.append(target_cell)
+		_new_cells.append(target_cell)
 	
 	# Расчет доступного пространства и реального потока
 	var available_space = 1.0 - target_cell.new_amount
@@ -488,7 +490,7 @@ func _apply_flow_to_direction(cell: MaterialCell, dx: int, dy: int, flow: float,
 	updated_cells.append(cell)
 	updated_cells.append(target_cell)
 
-func _apply_decompression(cell: MaterialCell, new_cells: Array, delta: float):
+func _apply_decompression(cell: MaterialCell, delta: float):
 	# Проверка наличия пространства сверху
 	if not _is_map_top_cell_empty(cell.get_x(), cell.get_y()): 
 		return

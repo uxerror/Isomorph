@@ -1,3 +1,4 @@
+###material_type.gd
 class_name MaterialType
 extends Resource
 

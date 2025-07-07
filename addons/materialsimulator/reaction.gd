@@ -1,3 +1,4 @@
+###reaction.gd
 class_name Reaction
 extends Resource
 
